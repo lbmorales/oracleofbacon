@@ -23,8 +23,8 @@ class OracleOfBacon
     # YOUR CODE HERE
   end
 
-  def initialize(api_key='')
-    # your code here
+  def initialize(api_key='38b99ce9ec87')
+    
   end
 
   def find_connections
