@@ -7,7 +7,7 @@ require 'rspec/collection_matchers'
 
 describe OracleOfBacon do
   before(:all) { FakeWeb.allow_net_connect = false }
-  describe 'instance', :pending => true do
+  describe 'instance', :pending => false do
     before(:each) { @orb = OracleOfBacon.new('fake_api_key') }
     describe 'when new' do
       subject { @orb }
@@ -94,11 +94,10 @@ describe OracleOfBacon do
     end
     it 'should raise OracleOfBacon::NetworkError if network problem' do
       FakeWeb.register_uri(:get, %r(http://oracleofbacon\.org),
-        :exception => Timeout::Error)
+                           :exception => Timeout::Error)
       lambda { @oob.find_connections }.
         should raise_error(OracleOfBacon::NetworkError)
     end
   end
 
 end
-      
