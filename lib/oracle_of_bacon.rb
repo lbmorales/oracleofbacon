@@ -1,6 +1,6 @@
 require 'byebug'                # optional, may be helpful
 require 'open-uri'              # allows open('http://...') to return body
-require 'cgi'                   # for
+require 'cgi'                   # for escaping URIs
 require 'nokogiri'              # XML parser
 require 'active_model'          # for validations
 
@@ -27,6 +27,7 @@ class OracleOfBacon
     @api_key = api_key
     @from ||= 'Kevin Bacon'
     @to ||= 'Kevin Bacon'
+    @uri = ''
   end
 
   def find_connections
@@ -38,14 +39,17 @@ class OracleOfBacon
         Net::ProtocolError => e
       # convert all of these into a generic OracleOfBacon::NetworkError,
       #  but keep the original error message
-      # your code here
+      raise NetworkError, e.message
     end
-    # your code here: create the OracleOfBacon::Response object
+    # create the OracleOfBacon::Response object
+    @response = Response.new(xml)
   end
 
   def make_uri_from_arguments
-    # your code here: set the @uri attribute to properly-escaped URI
-    #   constructed from the @from, @to, @api_key arguments
+    a = from.gsub(' ', '+')
+    b = to.gsub(' ', '+')
+    querystring = URI.escape("p=#{api_key}&a=#{a}&b=#{b}")
+    @uri = URI::HTTP.build({host: 'oracleofbacon.org', path: '/cgi-bin/xml', query: querystring}).to_s
   end
 
   class Response
@@ -59,17 +63,35 @@ class OracleOfBacon
     private
 
     def parse_response
-      if ! @doc.xpath('/error').empty?
+      if !@doc.xpath('/error').empty?
         parse_error_response
-        # your code here: 'elsif' clauses to handle other responses
-        # for responses not matching the 3 basic types, the Response
-        # object should have type 'unknown' and data 'unknown response'
+      elsif !@doc.xpath('/link').empty?
+        parse_graph_response
+      elsif !@doc.xpath('/spellcheck').empty?
+        parse_spellcheck_response
+      else
+        parse_unknown_response
       end
     end
     def parse_error_response
       @type = :error
       @data = 'Unauthorized access'
     end
+
+    def parse_graph_response
+      @type = :graph
+      # /link/* -> first level childs under link
+      @data = @doc.xpath('/link/*').map { |a| a.text }
+    end
+
+    def parse_spellcheck_response
+      @type = :spellcheck
+      @data = @doc.xpath('//match').map {|m| m.text}
+    end
+
+    def parse_unknown_response
+      @type = :unknown
+      @data = 'unknown'
+    end
   end
 end
-
